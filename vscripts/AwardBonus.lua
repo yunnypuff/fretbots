@@ -51,6 +51,8 @@ local xpPerLevel =
 	56045 
 }
 
+local availalbleNeutralsByTeam = {}
+
 -- Gold
 function AwardBonus:gold(bot, bonus)
 	if bot.stats.awards.gold < Settings.awardCap.gold then
@@ -168,7 +170,7 @@ function AwardBonus:RandomNeutralItem(unit, tier, isForceAward)
 		end
 	end
 	-- select a new item from the list
-	local item, realName = AwardBonus:SelectRandomNeutralItem(tier, unit)	
+	local item, realName = AwardBonus:SelectRandomNeutralItem(tier, unit)
 	-- award the new item if one was available
 	if item ~= nil then
 	  -- determine if the unit already has one (neutrals always in slot 16)
@@ -208,10 +210,10 @@ function AwardBonus:NeutralItem(bot, itemName, tier)
 end
 
 -- Returns valid items for a given tier and role
-function AwardBonus:GetNeutralTableForTierAndRole(tier,unit)
+function AwardBonus:GetNeutralTableForTierAndRole(tier, unit, availableNeutrals)
 	local items = {}
 	local count = 0
-	for _,item in ipairs(allNeutrals) do
+	for _,item in ipairs(availableNeutrals) do
 		-- Melee / Ranged
 		if item.ranged and not unit.stats.isMelee then
 		  if item.tier == tier and item.roles[unit.stats.role] ~= 0 then
@@ -230,8 +232,17 @@ end
 
 -- selects a random item from the list (by tier and role) and returns the internal item name
 function AwardBonus:SelectRandomNeutralItem(tier, unit)
+	local team = unit.stats.team
+	if availalbleNeutralsByTeam[team] == nil then
+		availalbleNeutralsByTeam[team] = Utilities:ShallowCopy(allNeutrals)
+	end
+
 	-- Get items that qualify
-	local items,count = AwardBonus:GetNeutralTableForTierAndRole(tier,unit)
+	local items,count = AwardBonus:GetNeutralTableForTierAndRole(
+		tier,
+		unit,
+		availalbleNeutralsByTeam[team])
+
 	if items == nil then return nil end
 	-- pick one at random
 	local item = items[math.random(count)]
@@ -246,10 +257,11 @@ function AwardBonus:SelectRandomNeutralItem(tier, unit)
 	-- if there was a valid item, remove it from the table (if settings tell us to)
 	if item ~= nil and Settings.neutralItems.isRemoveUsedItems then
 		-- note that this loop only works because we only want to remove one item
-		for i,_ in ipairs(allNeutrals) do
-			if item == allNeutrals[i] then
-		  	table.remove(allNeutrals,i)
-		  	break
+		for i,_ in ipairs(availalbleNeutralsByTeam[team]) do
+			if item == availalbleNeutralsByTeam[team][i] then
+			  table.remove(availalbleNeutralsByTeam[team],i)
+			  if isDebug then print ('Removing '..item.name..' from team '..team) end
+			  break
 			end
 		end
   end
@@ -263,20 +275,24 @@ end
 
 -- Attempts to give all of the bots an item from the given tier
 function AwardBonus:GiveTierToBots(tier)
-	local awards = 0
+	local awardsByTeam = {}
 	-- sanity check
-  if Bots == nil then return end
+    if Bots == nil then return end
 	for _, bot in pairs(Bots) do
 		if bot ~= nil then
-			if awards < Settings.neutralItems.maxPerTier then 
+
+			local team = bot.stats.team -- Initialize per team value
+			if awardsByTeam[team] == nil then awardsByTeam[team] = 0 end
+
+			if awardsByTeam[team] < Settings.neutralItems.maxPerTier then
 				if isDebug then
 					print('Giving tier '..tostring(tier)..', Role '..tostring(bot.stats.role) ..' item to '..bot:GetName())
 				end
 			  AwardBonus:RandomNeutralItem(bot, tier, bot.stats.role, true)
-			  awards = awards + 1
+			  awardsByTeam[team] = awardsByTeam[team] + 1
 			end
 		end
-	end
+    end
 end
 
 -- Gives the bot his death awrds, if there are any

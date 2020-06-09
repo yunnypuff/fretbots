@@ -314,6 +314,24 @@ function Utilities:IsTeamPlayer(playerID)
 	end
 end
 
+-- This a simple, naive implementation. It only copies the top level value
+-- and its direct children; there is no handling of deeper children, metatables
+-- or special types such as userdata or coroutines. It is also susceptible to
+-- influence by the __pairs metamethod.
+function Utilities:ShallowCopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in pairs(orig) do
+            copy[orig_key] = orig_value
+        end
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
+
 -- Copies matching table fields from source to target
 function Utilities:DeepCopy(source, target)
 	

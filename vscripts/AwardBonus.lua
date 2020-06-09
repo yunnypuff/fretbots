@@ -314,7 +314,7 @@ function AwardBonus:Death(bot)
 	local awards = 0
 	-- loop over bonuses in order
 	for _, award in pairs(Settings.deathBonus.order) do
-		-- this event gets fired for humans to, so drop out here if we don't want to give rewards to humans
+		-- this event gets fired for humans too, so drop out here if we don't want to give rewards to humans
 		if not bot.stats.isBot and Settings.deathBonus.isBotsOnly[award] then
 			if isDebug then 
 				print(bot.stats.name..' is a player and does not get death bonuses for '..award..'.') 

@@ -258,7 +258,7 @@ function DataTables:GetTeamNetWorth(team)
 end
 	
 -- Returns the net worth of the comparable position on the human side	
--- or zero if there is no mathing human
+-- or zero if there is no matching human
 function DataTables:GetRoleNetWorth(bot)
 	local worths = {}
 	for _,unit in pairs(AllUnits) do

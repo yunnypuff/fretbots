@@ -69,3 +69,17 @@ vscripts/SuperBotsE.lua
 vscripts/SuperBotsH.lua
 vscripts/SuperBotsL.lua
 vscripts/SuperBotsM.lua
+vscripts/anarchy_bots/armor_mr.lua
+vscripts/anarchy_bots/chat.lua
+vscripts/anarchy_bots/damage.lua
+vscripts/anarchy_bots/dust_tp.lua
+vscripts/anarchy_bots/go.lua
+vscripts/anarchy_bots/gold_xp.lua
+vscripts/anarchy_bots/human_bot.lua
+vscripts/anarchy_bots/neutral_items.lua
+vscripts/anarchy_bots/pseudo_death.lua
+vscripts/anarchy_bots/role_utility.lua
+vscripts/anarchy_bots/settings.lua
+vscripts/anarchy_bots/stat.lua
+vscripts/anarchy_bots/streak.lua
+vscripts/anarchy_bots/utilities.lua

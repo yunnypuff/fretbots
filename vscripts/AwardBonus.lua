@@ -203,7 +203,19 @@ function AwardBonus:NeutralItem(bot, itemName, tier)
   	local item = CreateItem(itemName, bot, bot)
     item:SetPurchaseTime(0)
     bot:AddItem(item)
-    bot.stats.neutralTier = tier
+	bot.stats.neutralTier = tier
+	-- Special handling if it's royal jelly
+	if itemName == "item_royal_jelly" then
+		Say(bot:GetPlayerOwner(), "Spending royal jelly charge on self", false)
+		bot:CastAbilityOnTarget(bot, item, bot:GetPlayerOwnerID())
+		for _, unit in pairs(Bots) do
+			if unit.stats.isBot and unit.stats.team == bot.stats.team and unit.stats.name ~= bot.stats.name then
+				Say(bot:GetPlayerOwner(), "Spending royal jelly charge on "..unit.stats.name, false)
+				bot:CastAbilityOnTarget(unit, item, bot:GetPlayerOwnerID())
+				break
+			end
+		end
+	end
     return true
   end
   return false

@@ -279,7 +279,10 @@ end
 function DataTables:GetRoleGPM(bot)
 	local data = {}
 	local names = {}
+	for _,unit in pairs(Players) do
 		local num = PlayerResource:GetGoldPerMin(unit.stats.id)
+		table.insert(data,num)
+	  table.insert(names, unit.stats.name)
 	end
 	Utilities:SortHighToLow(data)
 	if isVerboseDebug then

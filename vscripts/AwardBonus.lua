@@ -483,13 +483,27 @@ function AwardBonus:GetGPMBonus(bot)
   local botGPM = PlayerResource:GetGoldPerMin(bot.stats.id)
   local targetGPM = 0
   local playerGPM, playerName = DataTables:GetRoleGPM(bot)
-  -- the above will return zero if the is no counterpart, if that is the case return
-  if playerGPM ==0 then
-  	if isDebug then print('No player for this bot.') end
-  	return 0 
+
+  -- the above will return nil player name if the is no counterpart, if that is 
+  -- the case then return.
+  if playerName == nil then
+	  if isDebug then
+        print('No matching player/target for this bot: '..bot.stats.name)
+	  end
+  	return 0
+  else
+    if isDebug then
+	  print('Found matching player: '..playerName..' playerGPM: '..playerGPM)
+	end
   end
+
+  -- If we found a target player but his gpm is 0 then we can skip the rest
+  if playerGPM == 0 then
+	return 0
+  end
+
   -- add offset to the target
-  targetGPM = targetGPM + playerGPM + Settings.gpm.offset
+  targetGPM = playerGPM + Settings.gpm.offset
   -- Get individual multipliers
   local skill = bot.stats.skill
   local scale = Settings.gpm.scale[bot.stats.role]
@@ -513,7 +527,7 @@ function AwardBonus:GetGPMBonus(bot)
   	return 0 
   end
   -- get GPM difference
-  gpmDifference = targetGPM - botGPM
+  local gpmDifference = targetGPM - botGPM
   -- clamp?
   local clampedGPM = 0
   if not Settings.gpm.clampOverride then

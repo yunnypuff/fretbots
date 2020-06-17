@@ -136,7 +136,30 @@ function PerMinuteTimer()
 	  Timers:RemoveTimer(names.perMinuteTimer)
 	  return nil
 	end
-	local isApply = false
+
+	-- Compute the GPM / XPM bonuses per minute, which can be re-used for
+	-- each bot
+	local rankedGpmTableByTeam =
+	{
+		[RADIANT] = DataTables:GetRankedGPMTable(RADIANT),
+		[DIRE] = DataTables:GetRankedGPMTable(DIRE)
+	}
+
+	if isDebug then
+		print('===========GPM Table=============')
+		print('Radiant:')
+		for key, tuple in pairs(rankedGpmTableByTeam[RADIANT]) do
+			print(key..' - '..tuple[1]..' - '..tuple[2].name)
+		end
+
+		print('Dire:')
+		for key, tuple in pairs(rankedGpmTableByTeam[DIRE]) do
+			print(key..' - '..tuple[1]..' - '..tuple[2].name)
+		end
+	end
+
+	local allowPlayerBots = Settings.playerBots.enabled
+
 	-- loop over all bots
 	for _, bot in pairs(Bots) do
 		if bot ~= nil then

@@ -19,7 +19,7 @@ local role = require('RoleUtility')
 local thisDebug = true
 local isDebug = Debug.IsDebug() and thisDebug
 local isChatDebug = Debug.IsDebug() and false
-local isVerboseDebug = Debug.IsDebug() and false
+local isVerboseDebug = Debug.IsDebug() and true
 -- Set to true to initialize data tables on loading this file every time
 local isSoloDebug = false
 -- Set to true to buff Fret if he's in the game
@@ -39,8 +39,8 @@ BotTeam = 0
 HumanTeam = 0
 
 -- convenient constants for dumb valve integers
-local RADIANT = 2
-local DIRE = 3
+RADIANT = 2
+DIRE = 3
 
 -- Instantiate the class
 if DataTables == nil then
@@ -67,7 +67,7 @@ function DataTables:Initialize()
 	AllUnits = {};
 	for i,unit in pairs(Units) do
 		  Debug:Print(unit:GetName())
-  		local id = PlayerResource:GetSteamID(unit:GetMainControllingPlayer());	
+  		local id = PlayerResource:GetSteamID(unit:GetMainControllingPlayer());
   		local isFret = Debug:IsFret(id);
   		-- Buff Fret for Debug purposes
   		if isFret and not Flags.isDebugBuffed and isBuff then
@@ -76,13 +76,19 @@ function DataTables:Initialize()
 		  end  			
 		  -- Initialize data tables for this unit
 		  DataTables:GenerateStatsTables(unit);
-	end
-	-- Purge human side bots 
-	DataTables:PurgeHumanSideBots()
+    end
+    
+    -- Purge human side bots if we don't want to enable
+    -- any bonus for playerbots
+    if Settings.playerBots == nil or Settings.playerBots.enabled == false then
+        -- Purge human side bots 
+        DataTables:PurgeHumanSideBots()
+    end
+
 	-- Assign a support Pos 5
-	DataTables:SetBotPositionFive()
-  -- Set Initialized Flag
-  Flags.isStatsInitialized = true;
+	DataTables:ResolveBotsPositionFive()
+    -- Set Initialized Flag
+    Flags.isStatsInitialized = true;
 	
 	-- debug prints
 	if isDebug then
@@ -276,28 +282,136 @@ function DataTables:GetRoleNetWorth(bot)
 	end
 end
 
--- Returns the GPM the comparable position on the human side	
+-- Returns the GPM table of a team ranked from highest to lowest
+-- Each entry in the table is { gpm, unit.stats }
+function DataTables:GetRankedGPMTable(team)
+	local data = {}
+	-- Go through all the players and add them to our ranking table
+	for _, unit in pairs(Players) do
+		if unit.stats.team == team then
+			local gpm = PlayerResource:GetGoldPerMin(unit.stats.id)
+			table.insert(data, { gpm, unit.stats })
+		end
+	end
+
+	for _, unit in pairs(Bots) do
+		if unit.stats.team == team then
+			local gpm = PlayerResource:GetGoldPerMin(unit.stats.id)
+			table.insert(data, { gpm, unit.stats })
+		end
+	end
+
+	-- Sort highest to lowest, since the gpm element is the first
+	-- in the tuple, we use index 1
+	local gpmPosition = 1
+	table.sort(data, function (a, b) return a[gpmPosition] > b[gpmPosition] end)
+
+	return data
+end
+
+-- Gets the best-match GPM for an intended position. Will return gpm for other positions
+-- if no matching gpm is available for the intended position.
+--
+-- Returns { gpm, ranking, matchingUnit.stats }
+function DataTables:GetBestMatchGPMForPosition(targetPosition, allowBots, gpmTable)
+	-- the gpm table is populated from highest to lowest.
+	-- it's possible we don't have gpm for our given position
+	-- due to lack of qualified opponents, so we search from our intended
+	-- position to the highest position (1), of which there should be at least 1.
+	local match = nil
+	local foundPosition = 0
+	for i = targetPosition, 1, -1 do
+		local currentEntry = gpmTable[i]
+		if currentEntry ~= nil then
+			-- we found a GPM entry
+			if not currentEntry[2].isBot then
+				-- if it's not a bot, it's a human and let's do it
+				match = currentEntry
+				foundPosition = i
+				break
+			elseif allowBots then
+				-- it's a bot, but we'll allow it, so return it
+				match = currentEntry
+				foundPosition = i
+				break
+			-- otherwise keep trucking
+			end
+		end
+	end
+
+	if match == nil then
+		local result =
+		{
+			gpm = 0,
+			stats = nil,
+			position = 0
+		}
+		return result
+	else
+		local result =
+		{
+			gpm = match[1],
+			stats = match[2],
+			position = foundPosition
+		}
+		return result
+	end
+end
+
+-- Returns the GPM the comparable position on the human / opposing side
 -- or zero if there is no mathing human
+-- Returns GPM, playerName
 function DataTables:GetRoleGPM(bot)
+	-- TODO: Can probably just compute the GPM/role tables every minute and cache it
+	-- as these values are unlikely going to change between each bot that asks for it
+	local botTeam = bot.stats.team
 	local data = {}
 	local names = {}
-	for _,unit in pairs(Players) do
-		local num = PlayerResource:GetGoldPerMin(unit.stats.id)
-		table.insert(data,num)
-	  table.insert(names, unit.stats.name)
+	for _, unit in pairs(Players) do
+		if unit.stats.team ~= botTeam then
+			local gpm = PlayerResource:GetGoldPerMin(unit.stats.id)
+			table.insert(data, { unit.stats.name, gpm, unit.stats })
+			table.insert(names, unit.stats.name)
+		end
 	end
-	Utilities:SortHighToLow(data)
+
+	if Settings.playerBots ~= nil and Settings.playerBots.enabled then
+		for _, unit in pairs(Bots) do
+			if unit.stats.team ~= botTeam then
+				local gpm = PlayerResource:GetGoldPerMin(unit.stats.id)
+				table.insert(data, { unit.stats.name, gpm, unit.stats })
+				table.insert(names, unit.stats.name)
+			end
+		end
+	end
+
+	-- Sort highest to lowest
+	table.sort(data, function (a, b) return a[2] > b[2]	end)
+
 	if isVerboseDebug then
 		print('GPM Table:')
-		DeepPrintTable(data)
+		for _, tuple in pairs(data) do
+			print(tuple[1]..' - gpm: '..tuple[2])
+		end
 	end
+
 	if data[bot.stats.role] ~= nil then
-	  return data[bot.stats.role], names[bot.stats.role]
+		local gpm = data[bot.stats.role][2]
+		-- 3rd item is whether the target is a bot or not
+		-- local targetStats = data[bot.stats.role][3]
+		-- if targetStats.isBot then 
+		-- 	local adjustedGpm = gpm * bot.stats.skill / targetStats.skill
+		-- 	if isVerboseDebug then 
+		-- 		print(bot.stats.name..' target gpm adjusted from '..gpm..' to '..adjustedGpm)
+		-- 	end
+		-- 	gpm = adjustedGpm
+		-- end
+		return gpm, data[bot.stats.role][1]
 	-- specific debug case, pretend we have more players than we do
 	elseif isDebug and #Players == 1 then
-		return data[1] / bot.stats.role, names[1]	  
+		return data[1][2] / bot.stats.role, names[1]
 	else
-		return 0	
+		return 0, nil
 	end
 end
 
@@ -424,7 +538,7 @@ end
 	
 -- Both support bots will initially be set to position four.  
 -- Make one bot support 5 (at random)
-function DataTables:SetBotPositionFive()
+function DataTables:ResolveBotsPositionFive()
   for _, bot in pairs(Bots) do
   	-- The first position four selected is the unlucky one
   	if bot.stats.role == 4 then 

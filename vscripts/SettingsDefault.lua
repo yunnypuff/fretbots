@@ -24,7 +24,11 @@
   	-- are multipliers multiplicative, or additive (multiplicative is harder)
   	isMultiplicative = true,
   	-- Taunt humans when they die with chatwheel sounds?
-  	isPlayerDeathSound = true,
+	isPlayerDeathSound = true,
+	playerBots =
+	{
+		enabled = true
+	},
 		-- this represents a multiplier to all bonuses.  This allows each game to be slightly different
 		skill = 
 		{

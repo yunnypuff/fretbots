@@ -1,9 +1,30 @@
 -- Dependencies
 require 'Debug'
 require 'Utilities'
---require 'Settings'
 
-local RADIANT = 2 -- TODO: REMOVE THESE
+-------------------------------- DEV NOTES -------------------------------------
+-- TODO:
+-- * Make it so the class keeps track of one team only, then someone can 
+--   instantiate two of these, and one will track each team. Less if statements
+--
+-- * Make it so the ctor takes in all the bots for the team(s), and it will just
+--   keep a reference to all the bots and their known states.
+--   This is could be bad coupling...
+--
+-- * Invert the grant list so highest tier items are doled out first
+-- DONE:
+--------------------------------------------------------------------------------
+
+-- Neutral items come in 5 tiers. Items from each tier start dropping based on the time on the game clock.
+-- Drop chance is calculated by pseudo-random distribution, and rolled individually for each team and each tier. Higher tiered items are rolled first.
+-- Drop chance is only rolled when there is a hero within 750 radius of the killed creep.
+-- A neutral creep loses its ability to drop an item when it gets taken over by a player. It must belong to the neutral team to drop items.
+-- Neutral items do not drop if there is an enemy of the killing player within 600 radius of the killed neutral unit.
+-- Only counts the five picked heroes of the enemy team. Any other enemy unit (including clones and illusions) is ignored.
+-- The same item may only drop once for each team.
+-- A maximum of four items per tier can drop for each team.
+
+local RADIANT = 2
 local DIRE = 3
 
 -- local debug flag
@@ -17,9 +38,11 @@ NeutralItemsTracker = {
         allNeutralItems = {},
         neutralsByName = {},
         tierTimings = {},
-        maxNeutralItemsPerTier = 5, -- per tier per team
+        maxNeutralItemsPerTier = 4, -- per tier per team
         neutralItemMinInterval = 10,
-        neutralItemMaxInterval = 60
+        neutralItemMaxInterval = 60,
+        maxTier = 5,
+        minTier = 1
     }
 }
 
@@ -44,9 +67,11 @@ function NeutralItemsTracker:new(allNeutralItems, tierTimings)
             allNeutralItems = Utilities:ShallowCopy(allNeutralItems),
             neutralsByName = neutralsByName,
             tierTimings = tierTimings,
-            maxNeutralItemsPerTier = 5, -- per tier per team
+            maxNeutralItemsPerTier = 4, -- per tier per team
             neutralItemMinInterval = 10,
-            neutralItemMaxInterval = 60
+            neutralItemMaxInterval = 30,
+            maxTier = 5,
+            minTier = 1
         },
 
         statePerTeam =
@@ -72,19 +97,6 @@ function NeutralItemsTracker:new(allNeutralItems, tierTimings)
     return newInstance
 end
 
--- ideas:
--- keep track of number of neutral items gained per tier on either team
--- 
-
--- Neutral items come in 5 tiers. Items from each tier start dropping based on the time on the game clock.
--- Drop chance is calculated by pseudo-random distribution, and rolled individually for each team and each tier. Higher tiered items are rolled first.
--- Drop chance is only rolled when there is a hero within 750 radius of the killed creep.
--- A neutral creep loses its ability to drop an item when it gets taken over by a player. It must belong to the neutral team to drop items.
--- Neutral items do not drop if there is an enemy of the killing player within 600 radius of the killed neutral unit.
--- Only counts the five picked heroes of the enemy team. Any other enemy unit (including clones and illusions) is ignored.
--- The same item may only drop once for each team.
--- A maximum of four items per tier can drop for each team.
-
 function NeutralItemsTracker:ProcessAdditionalNeutralsForTeam(teamId, currentTime)
     local teamState = self.statePerTeam[teamId]
 
@@ -96,31 +108,46 @@ function NeutralItemsTracker:ProcessAdditionalNeutralsForTeam(teamId, currentTim
     -- We know we need to add some neutrals, so figure out what tier we're supposed
     -- to be on by iterating from tier 5 to 1, find the highest tier which the
     -- current game time exceeds
-    local currentTier = 0
+    local currentMaxTier = 0
     for i = 5, 1, -1 do
         if currentTime >= self.settings.tierTimings[i] then
-            currentTier = i
+            currentMaxTier = i
+            break
         end
     end
 
-    if currentTier == 0 then
+    self:DebugPrint('Current max tier for team '..teamId..' is '..currentMaxTier)
+
+    if currentMaxTier == 0 then
         -- We're not at any eligible tier time yet
         return
     end
 
     -- loop through all tiers current and below to see find the first tier where
-    -- we have not yet granted the maximum.
+    -- we have not yet granted up to the maximum.
     local tierToAdd = 0
-    for i = currentTier, 1, -1 do
-        local neutralsGrantedForTier = teamState.neutralsGrantedPerTier[currentTier]
+    for i = currentMaxTier, 1, -1 do
+        local neutralsGrantedForTier = teamState.neutralsGrantedPerTier[currentMaxTier]
+        self:DebugPrint('Neutrals granted for tier is '..neutralsGrantedForTier..' out of '..self.settings.maxNeutralItemsPerTier)
         if neutralsGrantedForTier < self.settings.maxNeutralItemsPerTier then
             tierToAdd = i
             break
         end
     end
 
-    -- No more neutrals can be added at this time
+    -- Now we need to randomly select the next timing to check for neutrals to
+    -- add to our fake stash
+    local nextTiming = math.random(
+        self.settings.neutralItemMinInterval,
+        self.settings.neutralItemMaxInterval)
+
+    teamState.nextNeutralTime = currentTime + nextTiming
+    self:DebugPrint('Next neutral scan is available at '..teamState.nextNeutralTime)
+
+    -- No more neutrals can be added at this time for this tier
     if tierToAdd == 0 then return end
+
+    self:DebugPrint('Adding tier '..tierToAdd..' neutral to team '..teamId)
 
     -- we're eligible for more neutrals for this tier, so let's increment our
     -- fake stash. We don't choose the actual item here because choosing the right
@@ -134,17 +161,6 @@ function NeutralItemsTracker:ProcessAdditionalNeutralsForTeam(teamId, currentTim
     -- given to any unit yet.
     local prev = teamState.neutralsGrantedPerTier[tierToAdd]
     teamState.neutralsGrantedPerTier[tierToAdd] = prev + 1
-
-    self:DebugPrint('Adding tier '..tierToAdd..' neutral to team '..teamId)
-
-    -- Now we need to randomly select the next timing to check for neutrals to
-    -- add to our fake stash
-    local nextTiming = math.random(
-        self.settings.neutralItemMinInterval,
-        self.settings.neutralItemMaxInterval)
-
-    teamState.nextNeutralTime = currentTime + nextTiming
-    self:DebugPrint('Next neutral is available at '..teamState.nextNeutralTime)
 end
 
 -- returns table candidates and candidate count
@@ -159,7 +175,7 @@ function NeutralItemsTracker:GetNeutralItemCandidates(teamId, tier, position, is
     local candidateCount = 0
     for i, neutral in pairs(allAvailableNeutrals) do
         if (neutral.tier == tier) -- ensure item is of the right tier
-            and ((neutral.ranged and not isMelee) or (neutral.mele and isMelee))
+            and ((neutral.ranged and not isMelee) or (neutral.melee and isMelee))
             and (neutral.roles[position] ~= 0) -- item is right for the position
         then
             local candidate =
@@ -175,26 +191,46 @@ function NeutralItemsTracker:GetNeutralItemCandidates(teamId, tier, position, is
     return neutralCandidates, candidateCount
 end
 
-function NeutralItemsTracker:IsHeroEligibleForNeutral(hero, tier)
-    -- a hero is eligible for a neutral if he has no neutral items or has a
-    -- neutral item of equal or higher tier already
+-- function NeutralItemsTracker:IsHeroEligibleForNeutral(hero, tier)
+--     -- a hero is eligible for a neutral if he has no neutral items or has a
+--     -- neutral item of equal or higher tier already
+--     local currentItem = hero:GetItemInSlot(16)
+
+--     if currentItem ~= nil then
+--         local itemName = currentItem:GetAbilityName()
+--         local neutralDef = self.settings.neutralsByName[itemName]
+--         if neutralDef ~= nil then
+--             return neutralDef.tier < tier -- we're eligible if we're at a lower tier
+--         else
+--             self:DebugPrint('Unrecognized item '..itemName..' in neutral definitions'
+--                             ..' treating hero as ineligible for neutral')
+--             return false
+--         end
+--     else
+--         -- bot has no item in neutral slot
+--         return true
+--     end
+-- end
+
+function NeutralItemsTracker:GetHeroCurrentNeutralTier(hero)
     local currentItem = hero:GetItemInSlot(16)
 
     if currentItem ~= nil then
         local itemName = currentItem:GetAbilityName()
         local neutralDef = self.settings.neutralsByName[itemName]
         if neutralDef ~= nil then
-            return neutralDef.tier < tier -- we're eligible if we're at a lower tier
+            return neutralDef.tier
         else
             self:DebugPrint('Unrecognized item '..itemName..' in neutral definitions'
-                            ..' treating hero as ineligible for neutral')
-            return false
+                            ..' treating hero as having no neutral')
+            return 0
         end
     else
         -- bot has no item in neutral slot
-        return true
+        return 0
     end
 end
+
 
 -- returns true or false for whether the item was added
 ---
@@ -245,7 +281,6 @@ function NeutralItemsTracker:TryAddNeutralItemToHero(hero, itemName)
 end
 
 function NeutralItemsTracker:OnTimer(currentTime, bots)
-    --
     local teamsToProcess = { RADIANT, DIRE }
     for _, teamId in pairs(teamsToProcess) do
         -- Check what tier the team is on based on time
@@ -257,36 +292,59 @@ function NeutralItemsTracker:OnTimer(currentTime, bots)
             DeepPrintTable(teamState.fakeStashPerTier)
         end
 
-        -- TODO: REVERSE THIS, NEED TO GRANT FROM HIGEST TIER TO LOWESTuit
-        for tier, neutralCount in pairs(teamState.fakeStashPerTier) do
-            self:DebugPrint('looping through tier '..tier)
-            for i = 1, neutralCount, 1 do
-                self:DebugPrint('processing neutral '..i..' out of '..neutralCount)
-                -- this one just goes through all the bots on the team, so we
-                -- could end up upgrading a bot who has higher tier items already
-                -- TODO: Improve this so bots with shittier items get priority
-                for _, bot in pairs(bots) do
-                    -- TODO: hard dep on fret's data structure
-                    local botTeam = bot.stats.team
-                    local position = bot.stats.role
-                    local isMelee = bot.stats.isMelee
-                    if botTeam == teamId and self:IsHeroEligibleForNeutral(bot, tier) then
-                        self:DebugPrint('doing bot '..bot.stats.name)
+        -- Loop through all the tiers from highest to lowest
+        for tier = self.settings.maxTier, self.settings.minTier, -1 do
+            local neutralsRemaining = teamState.fakeStashPerTier[tier]
+
+            -- Loop through all the bots that match our current team and is
+            -- eligible for the neutral of our current tier. this is a bit
+            -- inefficient but we can optimize later
+            for _, bot in pairs(bots) do
+                if neutralsRemaining == 0 then break end
+
+                -- TODO: hard dep on fret's data structure
+                local botTeam = bot.stats.team
+                local position = bot.stats.role
+                local isMelee = bot.stats.isMelee
+                local botName = bot.stats.name
+                if botTeam == teamId then
+                    self:DebugPrint('Processing tier '..tier..' neutral for '..botName..' on team '..teamId..' with '..neutralsRemaining..' left')
+                    local heroCurrentTier = self:GetHeroCurrentNeutralTier(bot)
+                    if heroCurrentTier < tier then
+                        self:DebugPrint('bot '..botName..' is eligible for tier '..tier..' neutrals')
+
                         local itemCandidates, candidatesCount =
                             self:GetNeutralItemCandidates(teamId, tier, position, isMelee)
+
+                        --if isDebug then DeepPrintTable(itemCandidates) end
 
                         if candidatesCount > 0 then
                             local candidateChosen = itemCandidates[math.random(candidatesCount)]
                             local itemChosen = candidateChosen.itemDef
                             local added = self:TryAddNeutralItemToHero(bot, itemChosen.name)
                             if added then
+                                -- remove the stash count
                                 teamState.fakeStashPerTier[tier] = teamState.fakeStashPerTier[tier] - 1
-                                neutralCount = neutralCount - 1
+                                -- decrement  number of neutrals we need to process for the current tier
+                                neutralsRemaining = neutralsRemaining - 1
+
+                                -- since we replaced an item, let's increment the count in the original tier
+                                -- so later on in processing, other bots can benefit from trickle down upgrade
+                                --
+                                -- this logic works because we process tiers from highest to lowest, and the
+                                -- previous tier MUST be lower than the current tier we're processing, so we
+                                -- are guaranteed to process this additional neutral in the following passes
+                                if heroCurrentTier > 0 then
+                                    teamState.fakeStashPerTier[heroCurrentTier] =
+                                        teamState.fakeStashPerTier[heroCurrentTier] + 1
+                                end
+                                break
                             end
                         end
                     end
                 end
             end
+            self:DebugPrint('Finished processing tier '..tier..' for team '..teamId..' with '..neutralsRemaining..' neutrals left.')
         end
     end
 end
@@ -319,7 +377,3 @@ function NeutralItemsTracker:DebugPrint(msg)
         print(msg)
     end
 end
-
--- local allNeutralItems = require 'SettingsNeutralItemTable'
--- local tracker = NeutralItemsTracker:new(allNeutralItems, { 420, 720, 920, 1024, 2046 })
--- tracker:RegisterItemDropListener()

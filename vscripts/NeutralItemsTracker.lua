@@ -1,4 +1,3 @@
-
 require 'Debug'
 require 'Utilities'
 
@@ -18,7 +17,26 @@ require 'Utilities'
 -- * Invert the grant list so highest tier items are doled out first
 
 --------------------------------------------------------------------------------
+------------------------ RECOMMENDED USAGE -------------------------------------
+-- In a system that will register timers and knows the existence of other bots
+-- create an instance of this, e.g.:
+--
+-- local allNeutralItems = require 'SettingsNeutralItemTable'
+-- local neutralItemTracker = 
+-- 	NeutralItemsTracker:new(allNeutralItems, 15, 30, { 0, 60, 120, 180, 300 })
+--
+-- Register a timer, which will invoke the neutralItemTracker:OnTimer() and use
+-- its return value to set the next interval
+-- e.g.:
+--
+-- function MyRegisteredTimer()
+--     local gametime = Utilities:GetAbsoluteTime()
+--     local interval = neutralItemTracker:OnTimer(gametime, Bots)
 
+--     return interval
+-- end
+--------------------------------------------------------------------------------
+--
 -- Neutral items come in 5 tiers. Items from each tier start dropping based on the time on the game clock.
 -- Drop chance is calculated by pseudo-random distribution, and rolled individually for each team and each tier. Higher tiered items are rolled first.
 -- Drop chance is only rolled when there is a hero within 750 radius of the killed creep.

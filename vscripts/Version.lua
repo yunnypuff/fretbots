@@ -1,23 +1,12 @@
-version = '0.4.0.1'
+version = '0.4.1.1'
 versionString = [[Changelog:
-Implemented 'Easier' difficulty.
+Reworked neutral item awards.  All bots now have their own neutral
+item timings, and neutral item death bonuses now subtract a number
+of seconds from these timings.  
 
-Fixed dumb bug with Debug:Print().
+Implemented a (hopefully) robust random seed generator.
 
-Implemented 'difficulty' chat command.  Lobby hose can dynamically override
-the selected difficulty once one has been applied. 'difficulty <votename>'
-to apply.
+Added I'm Bad's Royal Jelly code so bots actually use it.  Thanks!
 
-Refactored Settings.lua.  NeutralItem table and difficulty tables
-have been moved to external files, and are loaded via require/dofile.
-
-Local 'difficulties' table from Settings.lua is now global as 'Difficulties'
-in order to facilitate dynamic difficulty assertion.
-
-'Difficulties' table copies all difficulties into indices by name as
-they are loaded.  Difficulties are still also arranged by numeric index
-in order to allow the voting list to appear in order.
-
-Bugfix: The colon immediately following the bot's name in death award 
-messages is now the color of the bot's name (was previously green.)
+Removed Debug:Print() statement from NeutralItemTimer() (too spammy)
 ]]

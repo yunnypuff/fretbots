@@ -19,6 +19,8 @@
   	voteEndState = DOTA_GAMERULES_STATE_PRE_GAME,
   	-- voting ends when this amount of time has passed since voting began
   	voteEndTime = 30,  	
+  	-- Warning timings for vote ending
+  	voteWarnTimes = {10,5},
   	-- are multipliers multiplicative, or additive (multiplicative is harder)
   	isMultiplicative = true,
   	-- Taunt humans when they die with chatwheel sounds?
@@ -54,9 +56,12 @@
 			-- adds this number to the awards as they come out (make this positive to give better items early
 			-- make it negative to cause errors, probably.  If you want slower items just change the timings)
 			tierOffset = 0,
-			-- game time (seconds) at which awards are given.  Note that if offset is ~=0 then the latter ones
-			-- will never happen). 
-			timings = {0, 420, 1020, 2020, 3600}
+			-- game time (seconds) at which awards are given.  
+			timings = {0, 420, 1020, 2020, 3600},
+			-- variance for timings (this number of seconds added to base timing per bot)
+			variance = {0, 180},
+			-- if true, announce awards to chat
+			announce = true
 		},
 		-- used for awarding bonus gold periodically.  The method that does this award calculates target
 		-- gpm and then adds gold to the bot to attempt to force it to that level of gpm, modified by
@@ -136,7 +141,7 @@
         armor 				= {0, 3},
         magicResist 	= {0, 3},
         levels 				= {0, 2},
-        neutral 			= {0, 1},
+        neutral 			= {30, 180},
         stats					= {0, 3}				
 			},
 			-- (Seconds) Both ends of the range multiplied by gametime / this value. 
@@ -163,7 +168,7 @@
         armor 				= {0, 3},
         magicResist 	= {0, 3},
         levels 				= {0, 2},
-        neutral 			= {1, 2},
+        neutral 			= {30, 180},
         stats					= {1, 3}
       },
       -- if override is true, then the clamps aren't applied
@@ -273,12 +278,12 @@
 			-- Enable role scaling?  
 			scaleEnabled = 
 			{
-				gold 					= false,
-				armor 				= false,
-				magicResist 	= false,
-				levels 				= false,
-				neutral 			= false,
-				stats 				= false
+				gold 					= true,
+				armor 				= true,
+				magicResist 	= true,
+				levels 				= true,
+				neutral 			= true,
+				stats 				= true
 			},
       -- sets whether to announce in chat if awards have been given
       announce			= true  
@@ -302,7 +307,7 @@
 			armor 				= 25,
 			magicResist 	= 25,
 			levels 				= 10,
-			neutral 			= 1,
+			neutral 			= 1200,
 			stats 				= 25,   	
     },		
     -- Settings for dynamically adjusting difficulty

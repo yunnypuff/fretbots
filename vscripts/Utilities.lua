@@ -42,14 +42,18 @@ NEXT_LEVEL						= 'soundboard.next_level'
 PERFECT								= 'absolutely_perfect'
 DISAPPOINTED					= 'soundboard.glados.disappointed'
 PATIENCE							= 'soundboard.patience'
-NORMALIN							= 'soundboard.eto_nenormalno'
 HERO									= 'soundboard.youre_a_hero'
 GROAN									= 'soundboard.ti9.crowd_groan'
 APPLAUSE							= 'soundboard.applause'
+WOW										= 'soundboard.wow'
+LAKAD									= 'soundboard.ta_daaaa'
+JIAYOU								= 'soundboard.jia_you'
                 		
 -- tables for random sounds
-BAD_LIST							= {DISASTAH, RUSSIAN_REKT, GG, OH_MY_LORD, BEAUTIFUL}
-PLAYER_DEATH_LIST			= {PATIENCE, DISAPPOINTED, APPLAUSE, PERFECT, QUESTIONABLE, SAD_TROMBONE, WHAT_HAPPENED, NEXT_LEVEL, NORMALIN, GROAN}
+BAD_LIST							= {DISASTAH, RUSSIAN_REKT, GG, OH_MY_LORD, BEAUTIFUL, JIAYOU}
+PLAYER_DEATH_LIST			= {PATIENCE, DISAPPOINTED, APPLAUSE, PERFECT, QUESTIONABLE, 
+												 SAD_TROMBONE, WHAT_HAPPENED, NEXT_LEVEL, GROAN,
+												 WOW, LAKAD}
 
 -- duh
 TEAM_RADIANT					= 2
@@ -173,6 +177,17 @@ function Utilities:FormatAwardMessage(awards)
 	return msg
 end
 
+-- Announces neutral item award
+function Utilities:AnnounceNeutral(bot, tier, itemName)
+	-- first artifact: hero name, by color
+  local msg = ''
+	msg = msg..Utilities:ColorString(bot.stats.name..': ', Utilities:GetPlayerColor(bot.stats.id))
+	msg = msg..Utilities:ColorString('Received Neutral Item: ', awardColors.neutral)
+	msg = msg..Utilities:ColorString(itemName, neutralColors[tier])
+	-- print the message
+	GameRules:SendCustomMessage(msg, 0, 0)
+end
+
 -- Returns the localized hero name, if there is one
 function Utilities:GetName(name)
 	if heroNames[name] ~= nil then
@@ -190,6 +205,18 @@ end
 function Utilities:GetSound(list)
 	return list[math.random(1,table.getn(list))]
 end
+
+-- Prints a warning to chat if the first argument is equal to any values in the 
+-- table of the second argument
+function Utilities:Warn(value, values, warning)
+	for _,tableValue in ipairs(values) do
+		if value == tableValue then
+			formattedWarning = string.format(warning,value)
+			Utilities:Print(formattedWarning, MSG_WARNING)
+		end
+	end
+end
+
 
 -- clamps a number between two values, returns clamp rounded to nearest integer
 function Utilities:RoundedClamp(number, minimum, maximum)
@@ -233,7 +260,6 @@ function Utilities:RandomDecimal(low, high)
   return scaled + low
 end
 
-
 -- Returns a variance multipler (picks a random number between the two numbers (both integers) then divides by 100
 function Utilities:GetVariance(data)
 	-- sanity check
@@ -246,6 +272,18 @@ function Utilities:GetVariance(data)
 	-- remember math.Random only returns integers, so multiply / divide by 100
 	local percentage = math.random(data[1] * 100, data[2] * 100) / 100
 	return percentage
+end
+
+-- Returns a random integer between two numbers in a variance table
+function Utilities:GetIntegerVariance(data)
+		-- sanity check
+	if data == nil then 
+		return 0 
+	end
+	if data[1] == nil or data[2] == nil then 
+		return 0 
+	end
+	return math.random(data[1],data[2])
 end
 
 -- Gets game time

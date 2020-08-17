@@ -11,12 +11,14 @@ require 'BuffUnit'
 require 'Settings'
 -- Convenience Utilities
 require 'Utilities'
+-- Neutral items
+require 'NeutralItems'
 
 local role = require('RoleUtility')
 
 
 -- local debug flags
-local thisDebug = true
+local thisDebug = false
 local isDebug = Debug.IsDebug() and thisDebug
 local isChatDebug = Debug.IsDebug() and false
 local isVerboseDebug = Debug.IsDebug() and false
@@ -62,11 +64,12 @@ function DataTables:Initialize()
 	                              88,
 	                              FIND_ANY_ORDER,
 	                              false);
+	                              
+	Bots = nil
  	Bots={};
 	Players={};
 	AllUnits = {};
 	for i,unit in pairs(Units) do
-		  Debug:Print(unit:GetName())
   		local id = PlayerResource:GetSteamID(unit:GetMainControllingPlayer());	
   		local isFret = Debug:IsFret(id);
   		-- Buff Fret for Debug purposes
@@ -77,10 +80,16 @@ function DataTables:Initialize()
 		  -- Initialize data tables for this unit
 		  DataTables:GenerateStatsTables(unit);
 	end
+	Debug:Print('There are '..#Bots..' bots!')
+	
 	-- Purge human side bots 
 	DataTables:PurgeHumanSideBots()
 	-- Assign a support Pos 5
 	DataTables:SetBotPositionFive()
+	-- Sort Bots Table by role for convenience
+	Bots = DataTables:SortBotsByRole()
+	-- Set all bots to find tier 1 neutrals
+	NeutralItems:InitializeFindTimings()
   -- Set Initialized Flag
   Flags.isStatsInitialized = true;
 	
@@ -190,7 +199,9 @@ function DataTables:GenerateStatsTables(unit)
   	-- current level of neutral item
   	neutralTier = 0,
   	-- Timing for next level of neutral item
-  	neutralTiming = Settings.neutralItems.timings[1] + Utilities:GetIntegerVariance(Settings.neutralItems.variance),
+  	neutralTiming = 0,
+  	-- current tier of neutralItems found (i.e. spawned by this hero's timer)
+  	neutralsFound = 0,
   	-- Hero isMelee
   	isMelee = role.IsMelee(unit:GetBaseAttackRange()),
   	-- player ID
@@ -217,6 +228,8 @@ end
 
 -- Called by OnEntityKilled to update stats of the victim
 function DataTables:DoDeathUpdate(victim, killer)
+	-- drop out if no stats table
+	if victim.stats == nil then return end
 	-- Always update team kills
 	victim.stats.botTeamKills = PlayerResource:GetTeamKills(BotTeam)
 	victim.stats.humanTeamKills = PlayerResource:GetTeamKills(HumanTeam)
@@ -244,7 +257,9 @@ function DataTables:DoDeathUpdate(victim, killer)
 	victim.stats.enemyTeamNetWorth = DataTables:GetTeamNetWorth(killer.stats.team)
 	if isDebug then
 		print('Updated stats table for ' .. victim.stats.name)
-		if isVerboseDebug then DeepPrintTable(victim.stats) end
+		DeepPrintTable(victim.stats.chance)
+		DeepPrintTable(victim.stats.awards)
+		
 	end
 end
 
@@ -359,8 +374,6 @@ function DataTables:GetPerMinuteTables()
 	local temp = xpm[1]
 	xpm[1] = xpm[2]
 	xpm[2] = temp
-	Debug:Print(gpm, 'GPM Table')
-	Debug:Print(xpm, 'XPM Table')
 	return gpm, xpm
 end
 
@@ -461,6 +474,45 @@ end
 function DataTables:IsRealHero(unit)
 	return unit:IsHero() and unit:IsRealHero() and not unit:IsIllusion() and not unit:IsClone()	
 end
+
+-- Sorts the bots table by role
+function DataTables:SortBotsByRole()
+  local sortedData = {}
+  for i = 1,#Bots do
+  	table.insert(sortedData,i)
+  end
+  for _,bot in pairs(Bots) do
+  	if type(bot) == 'table' then
+  		sortedData[bot.stats.role] = bot
+  	end
+  end
+  -- ensure all slots are bots
+  for i=5,1,-1 do
+  	if type(sortedData[i]) ~= 'table' then
+  		table.remove(sortedData, i)
+  	end 
+  end  
+  return sortedData
+end
+
+function DataTables:GetTowers()
+	Units = FindUnitsInRadius(2,
+	                              Vector(0, 0, 0),
+	                              nil,
+	                              FIND_UNITS_EVERYWHERE,
+	                              3,
+	                              DOTA_UNIT_TARGET_BUILDING,
+	                              88,
+	                              FIND_ANY_ORDER,
+	                              false);
+	                              
+	for _, unit in pairs(Units) do
+		if unit:IsTower() then
+			Debug:Print(unit:GetName())
+		end
+	end
+end
+
 
 -- Initialize (if Debug)
 if isSoloDebug then 

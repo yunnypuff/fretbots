@@ -19,6 +19,10 @@ require 'Utilities'
 require 'DynamicDifficulty'
 -- Settings
 require 'Settings'
+-- Timers
+require 'Timers'
+-- Hero Specifc Extensions
+require 'HeroLoneDruid'
 
 -- Instantiate ourself
 if FretBots == nil then
@@ -56,32 +60,42 @@ end
 function FretBots:PlayersLoadedTimer()
 	-- if all players are loaded, initialize datatables and stop timer
 	if isAllPlayersSpawned then
-		Debug:Print('Initializing DataTables')
 		DataTables:Initialize()
 		-- Set the host ID for whitelisting settings chat commands
 		Settings:SetHostPlayerID()
 		-- Start bonus timers (they require DataTables to exist)
 		BonusTimers:Initialize()
+		-- Register EntityHurt Listener
+		EntityHurt:RegisterEvents()
+		-- Register EntityKilled Listener
+		EntityKilled:RegisterEvents()
+		-- Hero Specific extensions - these will stop themselves if they 
+		-- determine that they are not enabled
+		-- Disabled until this works
+		-- HeroLoneDruid:Initialize()
+		-- Remove this timer
 		Timers:RemoveTimer(playersLoadedTimerName)
 	  return nil
 	end
 	-- Check once per second until all players have loaded
 	local count = Utilities:GetPlayerCount()
 	if playerSpawnCount == count then
+		Debug:Print('All players have spawned.')
 		isAllPlayersSpawned = true
 	end
 	-- Check if we're past the load timeout
 	local gameTime = Utilities:GetAbsoluteTime()
 	if gameTime > playerLoadFailSafe then
+		Debug:Print('Spawn timer limit exceeded.  Proceeding.')
 		isAllPlayersSpawned = true
 	end
-	Debug:Print('Waiting for players to spawn: '..math.ceil(gameTime)..' : '..playerLoadFailSafe)
+	--Debug:Print('Waiting for players to spawn: '..math.ceil(gameTime)..' : '..playerLoadFailSafe)
 	return 1
 end
 
 function FretBots:OnPlayerSpawned(event)
 	playerSpawnCount = playerSpawnCount + 1
-	Debug:Print('Spawned Players: '..playerSpawnCount)
+	--Debug:Print('Spawned Players: '..playerSpawnCount)
 end
 
 -- Sets the random seed for the game, and burns off the initial bad random number

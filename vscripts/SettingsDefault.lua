@@ -21,7 +21,7 @@
   	voteEndTime = 30,  	
   	-- Warning timings for vote ending
   	voteWarnTimes = {10,5},
-  	-- are multipliers multiplicative, or additive (multiplicative is harder)
+  	-- are multipliers multiplicative, or additive 
   	isMultiplicative = true,
   	-- Taunt humans when they die with chatwheel sounds?
   	isPlayerDeathSound = true,
@@ -31,9 +31,9 @@
 			-- percentages, by role (1, 2, 3, 4, 5).  A random number is chosen between the clamps
 			variance = 
 			{
-				{0.9, 1.3},
-				{0.9, 1.3},
-				{0.9, 1.3},
+				{1.0, 1.3},
+				{1.0, 1.3},
+				{1.0, 1.3},
 				{0.9, 1.3},
 				{0.9, 1.3}
 			},
@@ -52,16 +52,18 @@
 			-- Max neutrals awarded per tier. You might be tempted to make this less than 5 to hinder the bots
 			-- a bit, but note that the award method doesn't prioritize bot roles, so you might end up with a
 			-- carry that doesn't have an item.
-			maxPerTier = 5,
+			maxPerTier = {4,4,4,4,4},
 			-- adds this number to the awards as they come out (make this positive to give better items early
 			-- make it negative to cause errors, probably.  If you want slower items just change the timings)
 			tierOffset = 0,
 			-- game time (seconds) at which awards are given.  
 			timings = {0, 420, 1020, 2020, 3600},
 			-- variance for timings (this number of seconds added to base timing per bot)
-			variance = {0, 180},
+			variance = {30, 240},
 			-- if true, announce awards to chat
-			announce = true
+			announce = true,
+			-- Assign randomly, or roll specific per role down the line? (former is easier)
+			assignRandomly = true
 		},
 		-- used for awarding bonus gold periodically.  The method that does this award calculates target
 		-- gpm and then adds gold to the bot to attempt to force it to that level of gpm, modified by
@@ -79,7 +81,7 @@
 			-- ignore clamps?
 			clampOverride = false,
 			-- scales (per role) for multipliers if necessary
-			scale 				= {1, 1, 1, 1, 1},
+			scale 				= {1.2, 1.1, 1.0, 0.8, 0.6},
 			-- Add this to the max clamp per minute
 			perMinuteScale = 1
 		},
@@ -90,7 +92,7 @@
 			variance 			= {1, 1},
 			clamp 				= {0, 50},
 			clampOverride = false,
-			scale 				= {1, 1, 1, 1, 1},
+			scale 				= {1.2, 1.1, 1.0, 0.8, 0.6},
 			perMinuteScale = 1
 		},
 		deathBonus = 
@@ -137,12 +139,12 @@
 			-- clamps are applied to the scaled value
 			range = 
 			{
-      	gold 					= {0, 500},
-        armor 				= {0, 3},
-        magicResist 	= {0, 3},
-        levels 				= {0, 2},
+      	gold 					= {100, 500},
+        armor 				= {1, 3},
+        magicResist 	= {1, 3},
+        levels 				= {0.5, 2},
         neutral 			= {30, 180},
-        stats					= {0, 3}				
+        stats					= {1, 3}				
 			},
 			-- (Seconds) Both ends of the range multiplied by gametime / this value. 
 			-- Adjust this to prevent large awards early.  Note that clamp has its
@@ -165,9 +167,9 @@
       clamp = 
       {
       	gold 					= {100, 1500},
-        armor 				= {0, 3},
-        magicResist 	= {0, 3},
-        levels 				= {0, 2},
+        armor 				= {1, 3},
+        magicResist 	= {1, 3},
+        levels 				= {0.5, 2},
         neutral 			= {30, 180},
         stats					= {1, 3}
       },
@@ -268,13 +270,13 @@
 			-- Awards multiplied by this (per role) if enabled
 			scale = 
 			{
-				gold 					= {1, 1, 1, 1, 1},
-				armor 				= {1, 1, 1, 1, 1},
-				magicResist 	= {1, 1, 1, 1, 1},
-				levels 				= {1, 1, 1, 1, 1},
-				neutral 			= {1, 1, 1, 1, 1},
-				stats 				= {1, 1, 1, 1, 1}
-			},	   
+				gold 					= {1.2, 1.1, 1.0, 0.8, 0.6},
+				armor 				= {1.2, 1.1, 1.0, 0.4, 0.2},
+				magicResist 	= {1.2, 1.1, 1.0, 0.4, 0.2},
+				levels 				= {1.2, 1.1, 1.0, 0.8, 0.6},
+				neutral 			= {1.2, 1.1, 1.0, 0.8, 0.6},
+				stats 				= {1.2, 1.1, 1.0, 0.8, 0.6}
+			},	  
 			-- Enable role scaling?  
 			scaleEnabled = 
 			{
@@ -285,6 +287,16 @@
 				neutral 			= true,
 				stats 				= true
 			},
+	    -- bonuses not awarded if game time is less than this number (seconds)
+	    timeGate = 
+	    {
+	  		gold 					= -100,
+				armor 				= -100,
+				magicResist 	= -100,
+				levels 				=  120,
+				neutral 			= -100,
+				stats 				= -100,     	
+	    },			
       -- sets whether to announce in chat if awards have been given
       announce			= true  
     },
@@ -314,41 +326,99 @@
     dynamicDifficulty = 
     {
     	-- Set to false to disable completely.
-    	enabled 				= false, 
+    	enabled 				= true, 
+    	-- 'knobs' to turn to adjust difficulty dynamically.
+    	knobs = 
+    	{
+    		'gpm',
+    		'xpm',
+    		'levels',
+    		'stats'
+    	},
     	-- Settings related to kill deficits
     	gpm = 
     	{
 	    	-- Set to false to disable adjustments based on kills.
 	    	enabled				= true,
 	    	-- if the bots are this many kills behind, begin adjusting
-	    	advantageThreshold = 5,
+	    	advantageThreshold = 2,
 	    	-- Awards scaled by scale amount every <this many> kills beyond the threshold
-	    	incrementEvery = 2,
+	    	incrementEvery = 1,
 	    	-- base bonus increased by this much when over threshold
-	    	base					= 50,
+	    	base					= 20,
 				-- incremental amounts are added to the base every time
 				-- the increment amount is reached, i.e. if threshold is 5,
 				-- incrementEvery is 2, and the bots are 9 kills behind,
 				-- then the nudge will be base + (increment * 2)
-	    	increment 		= 25,
+	    	increment 		= 10,
+	    	-- maximum for this bonus
+	    	cap 					= 200, 				
+	    	-- If true, adjustments are announced to chat.
+	    	announce 			= false
 	    },    	
     	xpm = 
     	{
-	    	-- Set to false to disable adjustments based on kills.
-	    	enabled				= true,
-	    	-- if the bots are this many kills behind, begin adjusting
-	    	advantageThreshold = 5,
-	    	-- Awards scaled by scale amount every <this many> kills beyond the threshold
-	    	incrementEvery = 2,
-	    	-- base bonus increased by this much when over threshold
-	    	base					= 50,
-				-- incremental amounts are added to the base every time
-				-- the increment amount is reached, i.e. if threshold is 5,
-				-- incrementEvery is 2, and the bots are 9 kills behind,
-				-- then the nudge will be base + (increment * 2)
-	    	increment 		= 25,
-	    },    	    
+	    	enabled							= false,
+	    	advantageThreshold 	= 2,
+	    	incrementEvery 			= 1,
+	    	base								= 10,
+	    	increment 					= 5,
+	    	cap 								= 200,
+	    	announce 						= false	    	
+	    },    	 
+    	levels = 
+    	{
+	    	enabled							= false,
+	    	advantageThreshold	= 10,
+	    	incrementEvery			= 2,
+	    	base								= 1,
+	    	increment 					= 1,
+	    	cap 								= 3,
+	    	announce 						= false,
+	    	-- chanceAdjust is optional and will adjust the base chance for 
+	    	-- death awards for each knob. 
+	    	chanceAdjust = 
+	    	{
+		    	enabled							= true,
+		    	advantageThreshold	= 10,
+		    	incrementEvery			= 0,
+		    	base								= 1.0,
+		    	increment 					= 0,
+		    	cap 								= 1,
+		    	announce 						= false,	    		
+	    	}
+	    },    		  
+    	stats = 
+    	{
+	    	enabled							= true,
+	    	advantageThreshold	= 7,
+	    	incrementEvery			= 2,
+	    	base								= 1,
+	    	increment 					= 1,
+	    	cap 								= 5,
+	    	announce 						= false,
+	    	-- chanceAdjust is optional and will adjust the base chance for 
+	    	-- death awards for each knob. 
+	    	chanceAdjust = 
+	    	{
+		    	enabled							= true,
+		    	advantageThreshold	= 7,
+		    	incrementEvery			= 0,
+		    	base								= 0.5,
+		    	increment 					= 0,
+		    	cap 								= 1,
+		    	announce 						= false,	    		
+	    	}
+	    },  	         
     },
+    -- Settings for hero specific stuff (i.e. experimental LD bear item moving)
+    heroSpecific = 
+    {
+    	loneDruid = 
+    	{
+    		enabled = true
+    	}
+    }
   }
   
   return settings

@@ -1,11 +1,153 @@
 TODO: 
 
-Implement dynamic difficulty adjustment for death awards.
-
-Rework neutral item awards such that each hero has its own timing 
-per neutral level, and make awards lower the time for the next tier
-rather than immediately reward the item.
 -----------------------------------
+
+-----------------------------------
+0.5.1.0
+-----------------------------------
+Reworked difficulty interface.  Difficulty settings are now just one standard
+version, and players vote on an offset that will be applied to the role scaling.
+
+Disabled test version of Lone Druid timers.
+
+-----------------------------------
+0.5.0.4
+-----------------------------------
+Actually fixed weirdness when the bot team has humans.
+
+-----------------------------------
+0.5.0.3
+-----------------------------------
+Added experimental support for moving Lone Druid's items to his bear.
+
+Revamped some debug messages in Fretbots.lua to be less spammy and 
+more debuggy.
+
+-----------------------------------
+0.5.0.2
+-----------------------------------
+Fixed (maybe) weirdness when the bot team has 1 human.
+
+-----------------------------------
+0.5.0.1
+-----------------------------------
+Added sanity checks for both bad throttle states (<0, >1).
+
+-----------------------------------
+0.5.0.0
+-----------------------------------
+Added rudimentary GameState(read: Who is winning?) tracker  to throttle
+bot awards if they're running down mid despite being behind in kills.
+Note: This is way more game designer experimental than I ever planned 
+to be an is probably way off.  Apologies.	
+The current intent is that the bot bonues will scale somewhere from 
+full if they are less than one lane ahead, to stop if they are slightly
+greater than one lane ahead.  
+
+-----------------------------------
+0.4.3.5
+-----------------------------------
+Added rudimentary stats reporting for public chat.
+
+-----------------------------------
+0.4.3.4
+-----------------------------------
+Adjusted dynamic difficulty scaling for stats to be a little
+less punitive.
+
+Adjusted awarding such that awards past the cap will instead award the cap. 
+
+-----------------------------------
+0.4.3.3
+-----------------------------------
+Adjusted base armor from agility formula to reflect new patch.
+
+-----------------------------------
+0.4.3.2
+-----------------------------------
+Disabled neutral message return to stash chat announcements.
+
+Fixed bug preventing dynamic bonuses form being disabled.
+
+Disabled dynamic bonuses for easier difficulty.
+
+-----------------------------------
+0.4.3.1
+-----------------------------------
+Disabled dynamic levels by default.
+
+Tweaked difficulties a bit more.
+
+-----------------------------------
+0.4.3.0
+-----------------------------------
+Removed Tobi's sound cues.  They're no longer in the game files, but I shouldn't
+be referencing them either.  
+
+Adjusted AwardBonus:levels() to return if the target bot is already
+level 30.  I don't recall this ever having been an issue, but it's good
+sense.
+
+Implemented dynamic difficulty adjustments for awards other than GPM and XPM.
+Current settings are experimental.
+
+Added announce setting for various dynamic difficulty knobs.  Set to false
+by default.  If true, knob adjustments are announced to chat.
+
+Fixed DynamicDifficulty:MakeAdjustment() so that it never attempts to
+divide by 0.
+
+Enabled dynamic difficulty by default in standard and role scaled difficulties.
+
+Added timeGate setting to death bonuses that prevents them from being awarded
+until a certain number of seconds of game time have elapsed.
+
+Fixed a bug with awarding levels around 30.
+
+Tweaked difficulty a little bit more.
+
+-----------------------------------
+0.4.2.1
+-----------------------------------
+Modfied neutral item table to use numeric values for most differentiators
+(melee flag, ranged flag, roles) numbered 0-x.  These values are now used
+in the GetBotDesireForItem() function.  This should provide some 
+granularity to this function, whereas before it was pretty basic.
+
+-----------------------------------
+0.4.2.0
+-----------------------------------
+Further reworked Neutral Item awards:
+	
+	Split neutral timers; there is now a 'drop' timer that tracks 
+	when items are spawned, and a 'dole' timer that handles assigning.
+	
+	Neutral items now have separate drop amounts per tier.
+	
+	Bots now have rudimentary desires for certain items over other ones
+	(or would, if the table values were not currently all ones.)
+	
+	Items that are removed from the bots are returned to a virtual
+	stash so that they can be allocated to a new bot.
+	
+	Added settings for how to assign neutrals: truly randomly, or
+	the old method where each bot gets assigned directly an item
+	it can use.
+	
+	Moved functions for handling neutrals out of AwardBonus and into 
+	a dediciated file (NeutralItems).
+	
+-----------------------------------
+0.4.1.3
+-----------------------------------
+Check-in prior to another rework of neutral drops.
+
+-----------------------------------
+0.4.1.2
+-----------------------------------
+Tweaked settings for Harder and EvenHarder difficulties.
+
+Modified OnEntityHurt/DeathUpdate to drop out if the victim has no stats table.
 
 -----------------------------------
 0.4.1.1

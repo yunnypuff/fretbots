@@ -22,6 +22,9 @@ MSG_BAD 							= 3
 MSG_AWARD							= 4
 MSG_CONSOLE_GOOD			= 5
 MSG_CONSOLE_BAD				= 6
+MSG_NEUTRAL_FIND      = 7
+MSG_NEUTRAL_TAKE      = 8
+MSG_NEUTRAL_RETURN    = 9
 
 -- sound constants
 DISASTAH							= 'soundboard.disastah'
@@ -50,7 +53,7 @@ LAKAD									= 'soundboard.ta_daaaa'
 JIAYOU								= 'soundboard.jia_you'
                 		
 -- tables for random sounds
-BAD_LIST							= {DISASTAH, RUSSIAN_REKT, GG, OH_MY_LORD, BEAUTIFUL, JIAYOU}
+BAD_LIST							= {RUSSIAN_REKT, GG, BEAUTIFUL, JIAYOU, GROAN}
 PLAYER_DEATH_LIST			= {PATIENCE, DISAPPOINTED, APPLAUSE, PERFECT, QUESTIONABLE, 
 												 SAD_TROMBONE, WHAT_HAPPENED, NEXT_LEVEL, GROAN,
 												 WOW, LAKAD}
@@ -178,12 +181,18 @@ function Utilities:FormatAwardMessage(awards)
 end
 
 -- Announces neutral item award
-function Utilities:AnnounceNeutral(bot, tier, itemName)
-	-- first artifact: hero name, by color
+function Utilities:AnnounceNeutral(bot, item, msgType)
   local msg = ''
+	-- first artifact: hero name, by color
 	msg = msg..Utilities:ColorString(bot.stats.name..': ', Utilities:GetPlayerColor(bot.stats.id))
-	msg = msg..Utilities:ColorString('Received Neutral Item: ', awardColors.neutral)
-	msg = msg..Utilities:ColorString(itemName, neutralColors[tier])
+	if msgType == MSG_NEUTRAL_FIND then
+		msg = msg..Utilities:ColorString('Found Neutral Item: ', awardColors.neutral)
+	elseif msgType == MSG_NEUTRAL_TAKE then
+		msg = msg..Utilities:ColorString('Took Neutral Item from Stash: ', awardColors.neutral)	
+	elseif msgType == MSG_NEUTRAL_RETURN then
+		msg = msg..Utilities:ColorString('Returned Neutral Item to Stash: ', awardColors.neutral)			
+	end
+	msg = msg..Utilities:ColorString(item.realName, neutralColors[item.tier])
 	-- print the message
 	GameRules:SendCustomMessage(msg, 0, 0)
 end
@@ -372,7 +381,6 @@ end
 
 -- Copies matching table fields from source to target
 function Utilities:DeepCopy(source, target)
-	
   for key, value in pairs(source) do 
     if target[key] ~= nil then
     	if type(value) == 'table' then 
@@ -456,6 +464,14 @@ function Utilities:GetHostPlayerID()
 			return i
 		end
 	end
+end
+
+-- returns true if a unit is a real hero
+function Utilities:IsRealHero(unit)
+	if unit:IsHero() and unit:IsRealHero() and not unit:IsIllusion() and not unit:IsClone() then
+		return true
+	end
+	return false
 end
 
 -- iterates over a table by keys, alphabetically

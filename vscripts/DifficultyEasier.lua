@@ -12,7 +12,7 @@ local settings =
 	{
 		enabled = true,
 		isRemoveUsedItems = true,
-		maxPerTier = 4,
+		maxPerTier = {4,4,4,2,2},
 		tierOffset = 0,
 		timings = {420, 1020, 1620, 2220, 3600}
 	},	
@@ -48,6 +48,11 @@ local settings =
 	    stats					= {0, 1},	
 	  },  	
 	}, 
+  dynamicDifficulty = 
+  {
+  	-- Set to false to disable completely.
+  	enabled 				= false,
+  }
 }
 
 return settings

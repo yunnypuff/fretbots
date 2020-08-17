@@ -83,3 +83,5 @@ vscripts/anarchy_bots/settings.lua
 vscripts/anarchy_bots/stat.lua
 vscripts/anarchy_bots/streak.lua
 vscripts/anarchy_bots/utilities.lua
+
+vscripts/Test.lua
